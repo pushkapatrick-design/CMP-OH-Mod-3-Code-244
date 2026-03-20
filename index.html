@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en" style="margin:0;padding:0;width:100%;height:100%;overflow:hidden;">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code 244 – Damage Switch Gang Operator Mechanism</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; font-family:'Outfit',sans-serif; background:#0a0a0f; }
+
+  #sl-wrapper {
+    width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; background:#0a0a0f;
+  }
+
+  #sl-stage {
+    width:1920px; height:1080px;
+    transform-origin: center center;
+    position:relative;
+    overflow:hidden;
+    background: linear-gradient(145deg, #0d1117 0%, #0a0e16 40%, #101820 100%);
+  }
+
+  /* Ambient glow effects */
+  .ambient-glow {
+    position:absolute; border-radius:50%; filter:blur(120px); opacity:0.15; pointer-events:none; z-index:0;
+  }
+  .glow-1 { width:600px; height:600px; background:#2563eb; top:-100px; left:-100px; }
+  .glow-2 { width:500px; height:500px; background:#f59e0b; bottom:-80px; right:200px; }
+  .glow-3 { width:400px; height:400px; background:#2563eb; top:300px; right:-50px; opacity:0.08; }
+
+  /* Top bar */
+  .top-bar {
+    position:absolute; top:0; left:0; right:0; height:6px; z-index:10;
+    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 30%, #f59e0b 70%, #f97316 100%);
+  }
+
+  /* Header area */
+  .header-area {
+    position:absolute; top:10px; left:60px; right:60px; z-index:5;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .module-tag {
+    display:inline-flex; align-items:center; gap:8px;
+    background: rgba(37,99,235,0.12); border:1px solid rgba(37,99,235,0.25);
+    border-radius:8px; padding:8px 18px; font-size:22px; font-weight:500;
+    color:#60a5fa; letter-spacing:0.5px; text-transform:uppercase;
+  }
+  .module-tag i { width:14px; height:14px; }
+  .progress-info {
+    display:flex; align-items:center; gap:16px; color:rgba(255,255,255,0.4); font-size:22px;
+  }
+  .progress-bar-bg {
+    width:140px; height:4px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;
+  }
+  .progress-bar-fill {
+    height:100%; width:65%; border-radius:4px;
+    background: linear-gradient(90deg, #2563eb, #3b82f6);
+    transition: width 0.6s ease;
+  }
+
+  /* Main content grid */
+  .main-content {
+    position:absolute; top:60px; left:60px; right:60px; bottom:100px;
+    display:grid; grid-template-columns:1fr 1fr; gap:48px;
+    z-index:5;
+    grid-auto-flow: dense;
+  }
+
+  /* Left column */
+  .left-col {
+    display:flex; flex-direction:column; justify-content:flex-start; gap:28px;
+    padding-top:0; margin-top:0;
+  }
+
+  .code-badge {
+    display:inline-flex; align-items:center; gap:10px; align-self:flex-start;
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.08));
+    border:1px solid rgba(245,158,11,0.3); border-radius:12px;
+    padding:10px 20px; margin-bottom:4px;
+    position:absolute; top:30px; right:60px; z-index:15;
+  }
+  .code-badge-num {
+    font-size:28px; font-weight:800; color:#fbbf24;
+    letter-spacing:1px; line-height:1;
+  }
+  .code-badge-label {
+    font-size:11px; font-weight:600; color:rgba(251,191,36,0.7);
+    text-transform:uppercase; letter-spacing:1.5px;
+  }
+
+  .slide-title {
+    font-size:38px; font-weight:700; color:#ffffff;
+    line-height:1.25; letter-spacing:-0.5px;
+    white-space:nowrap;
+  }
+  .slide-title span { color:#ffffff; }
+
+  .desc-text {
+    font-size:34px; font-weight:300; color:rgba(255,255,255,0.55);
+    line-height:1.7; max-width:720px;
+  }
+
+  /* Info cards */
+  .info-cards { display:flex; flex-direction:column; gap:14px; margin-top:8px; }
+
+  .info-card {
+    display:flex; align-items:flex-start; gap:16px;
+    background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);
+    border-radius:14px; padding:18px 22px;
+    cursor:pointer; transition: all 0.35s ease;
+    position:relative; overflow:hidden;
+  }
+  .info-card::before {
+    content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:#2563eb; opacity:0; transition: opacity 0.3s ease;
+  }
+  .info-card:hover { background:rgba(37,99,235,0.06); border-color:rgba(37,99,235,0.2); transform:translateX(4px); }
+  .info-card:hover::before { opacity:1; }
+  .info-card.active { background:rgba(37,99,235,0.08); border-color:rgba(37,99,235,0.25); }
+  .info-card.active::before { opacity:1; }
+
+  .card-icon {
+    width:42px; height:42px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+  }
+  .card-icon.condition { background:rgba(239,68,68,0.12); color:#f87171; }
+  .card-icon.maintenance { background:rgba(34,197,94,0.12); color:#4ade80; }
+  .card-icon.action { background:rgba(245,158,11,0.12); color:#fbbf24; }
+
+  .card-icon i { width:20px; height:20px; }
+
+  .card-body { flex:1; }
+  .card-label {
+    font-size:19px; font-weight:600; text-transform:uppercase;
+    letter-spacing:1.2px; margin-bottom:5px; opacity:0.5;
+  }
+  .card-label.condition { color:#f87171; }
+  .card-label.maintenance { color:#4ade80; }
+  .card-label.action { color:#fbbf24; }
+
+  .card-text { font-size:30px; font-weight:400; color:rgba(255,255,255,0.8); line-height:1.55; }
+
+  /* Right column */
+  .right-col {
+    display:flex; flex-direction:column; justify-content:flex-start; align-items:flex-end;
+    position:relative; width:100%; max-width:500px; gap:24px; padding-top:360px;
+  }
+
+  .image-container {
+    position:relative; width:100%; max-width:580px;
+    border-radius:20px; overflow:hidden;
+    background: rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 20px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03);
+    cursor:pointer; transition:all 0.3s ease;
+  }
+  .image-container:hover {
+    border-color:rgba(37,99,235,0.4);
+    box-shadow: 0 20px 80px rgba(0,0,0,0.4), 0 0 0 2px rgba(37,99,235,0.3);
+    transform:scale(1.02);
+  }
+  .image-container img {
+    width:100%; height:auto; display:block;
+    object-fit:cover; max-height:560px;
+  }
+
+  /* Image overlay label */
+  .img-label {
+    display:none;
+  }
+  .img-label-text { font-size:13px; color:rgba(255,255,255,0.7); font-weight:400; }
+  .img-label-text strong { color:#fbbf24; font-weight:600; }
+  .img-zoom-btn {
+    width:36px; height:36px; border-radius:8px; border:none;
+    background:rgba(37,99,235,0.2); color:#60a5fa;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:all 0.3s ease;
+  }
+  .img-zoom-btn:hover { background:rgba(37,99,235,0.4); }
+  .img-zoom-btn i { width:16px; height:16px; }
+
+  /* Hotspot marker on image */
+  .hotspot {
+    position:absolute; width:32px; height:32px; border-radius:50%;
+    background:rgba(239,68,68,0.3); border:2px solid #ef4444;
+    cursor:pointer; z-index:3;
+    animation: hotspot-pulse 2s ease-in-out infinite;
+  }
+  .hotspot::after {
+    content:''; position:absolute; inset:-6px; border-radius:50%;
+    border:1px solid rgba(239,68,68,0.3);
+    animation: hotspot-ring 2s ease-in-out infinite;
+  }
+  @keyframes hotspot-pulse {
+    0%,100% { transform:scale(1); }
+    50% { transform:scale(1.15); }
+  }
+  @keyframes hotspot-ring {
+    0%,100% { transform:scale(1); opacity:1; }
+    50% { transform:scale(1.5); opacity:0; }
+  }
+
+  .hotspot-tooltip {
+    position:absolute; bottom:calc(100% + 12px); left:50%; transform:translateX(-50%);
+    background:rgba(10,10,15,0.92); backdrop-filter:blur(10px);
+    border:1px solid rgba(239,68,68,0.3); border-radius:10px;
+    padding:10px 16px; white-space:nowrap; pointer-events:none;
+    opacity:0; transition:opacity 0.3s ease; font-size:12px; color:#f1f5f9;
+  }
+  .hotspot-tooltip::after {
+    content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+    border:6px solid transparent; border-top-color:rgba(10,10,15,0.92);
+  }
+  .hotspot:hover .hotspot-tooltip { opacity:1; }
+
+  /* Lightbox */
+  .lightbox {
+    position:fixed; inset:0; z-index:100;
+    background:rgba(5,5,10,0.92); backdrop-filter:blur(20px);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity 0.4s ease;
+  }
+  .lightbox.active { opacity:1; pointer-events:auto; }
+  .lightbox img {
+    max-width:85%; max-height:85%; border-radius:16px;
+    box-shadow:0 40px 120px rgba(0,0,0,0.6);
+  }
+  .lightbox-close {
+    position:fixed; top:30px; right:30px;
+    width:48px; height:48px; border-radius:12px; border:none;
+    background:rgba(255,255,255,0.12); color:#f1f5f9;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:20px; z-index:101;
+    opacity:0; pointer-events:none;
+    transition:opacity 0.4s ease, background 0.3s ease;
+  }
+  .lightbox-close.active { opacity:1; pointer-events:auto; }
+  .lightbox-close:hover { background:rgba(255,255,255,0.25); }
+  .lightbox-close:hover { background:rgba(255,255,255,0.25); }
+  .lightbox-close i { width:24px; height:24px; }
+
+  /* Bottom bar */
+  .bottom-bar {
+    display:none;
+  }
+
+  .nav-hint {
+    display:flex; align-items:center; gap:8px;
+    font-size:22px; color:rgba(255,255,255,0.3);
+  }
+  .nav-hint i { width:14px; height:14px; }
+
+  .key-takeaway {
+    display:flex; align-items:center; gap:10px;
+    background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.15);
+    border-radius:10px; padding:10px 20px;
+  }
+  .key-takeaway i { width:16px; height:16px; color:#fbbf24; flex-shrink:0; }
+  .key-takeaway-text { font-size:22px; color:rgba(255,255,255,0.6); }
+  .key-takeaway-text strong { color:#fbbf24; font-weight:600; }
+
+  .nav-buttons { display:flex; gap:10px; }
+  .nav-btn {
+    height:44px; border-radius:10px; border:none;
+    display:flex; align-items:center; gap:8px;
+    padding:0 22px; font-family:'Outfit',sans-serif;
+    font-size:24px; font-weight:500; cursor:pointer;
+    transition:all 0.3s ease;
+  }
+  .nav-btn i { width:16px; height:16px; }
+  .nav-btn.secondary {
+    background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.6);
+    border:1px solid rgba(255,255,255,0.08);
+  }
+  .nav-btn.secondary:hover { background:rgba(255,255,255,0.1); color:#f1f5f9; }
+  .nav-btn.primary {
+    background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff;
+    box-shadow:0 4px 20px rgba(37,99,235,0.3);
+  }
+  .nav-btn.primary:hover { box-shadow:0 6px 28px rgba(37,99,235,0.45); transform:translateY(-1px); }
+
+  /* Animations */
+  .fade-up {
+    opacity:0; transform:translateY(24px);
+    animation: fadeUp 0.7s ease forwards;
+  }
+  @keyframes fadeUp {
+    to { opacity:1; transform:translateY(0); }
+  }
+  .delay-1 { animation-delay:0.1s; }
+  .delay-2 { animation-delay:0.2s; }
+  .delay-3 { animation-delay:0.3s; }
+  .delay-4 { animation-delay:0.4s; }
+  .delay-5 { animation-delay:0.5s; }
+  .delay-6 { animation-delay:0.6s; }
+  .delay-7 { animation-delay:0.7s; }
+</style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+ </head>
+ <body>
+  <div id="sl-wrapper">
+   <div id="sl-stage">
+    <!-- Ambient glows -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div><!-- Top accent bar -->
+    <div class="top-bar"></div><!-- Main content -->
+    <div class="main-content">
+     <!-- LEFT COLUMN -->
+     <div class="left-col">
+      <div class="code-badge fade-up delay-1">
+       <div>
+        <div class="code-badge-label">
+         Condition Code
+        </div>
+        <div class="code-badge-num" id="codeNum">
+         244
+        </div>
+       </div>
+      </div>
+      <h1 class="slide-title fade-up delay-2" id="slideTitle">Damage Switch Gang Operator Mechanism</h1>
+      <div class="fade-up delay-3" style="width:100%; max-width:500px; margin: 12px 0 20px 0; border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.06);"><img src="https://raw.githubusercontent.com/pushkapatrick-design/ancillary-providers/main/Screenshot%202026-02-24%20134104.png" alt="Switch gang operator mechanism" loading="lazy" style="width:100%; height:auto; display:block;" onerror="console.error('Image failed:', this.src); this.style.background='linear-gradient(135deg,#1e293b,#0f172a)'; this.style.minHeight='200px'; this.alt='Image unavailable';">
+      </div>
+      <p class="desc-text fade-up delay-3" id="codeDesc">Use code 244 when the switch gang operator mechanism is found to be broken, bent, or missing during inspection.</p>
+      <div class="info-cards">
+       <div class="info-card fade-up delay-4" id="card-condition" onclick="activateCard('condition')">
+        <div class="card-icon condition"><i data-lucide="alert-triangle"></i>
+        </div>
+        <div class="card-body">
+         <div class="card-label condition">
+          Condition
+         </div>
+         <div class="card-text">
+          Mechanism is <strong>broken</strong>, <strong>bent</strong>, or <strong>missing</strong>
+         </div>
+        </div>
+       </div>
+       <div class="info-card fade-up delay-6" id="card-maintenance" onclick="activateCard('maintenance')">
+        <div class="card-icon maintenance"><i data-lucide="check-circle"></i>
+        </div>
+        <div class="card-body">
+         <div class="card-label maintenance">
+          Maintenance
+         </div>
+         <div class="card-text">
+          Does <strong>not</strong> require on-site maintenance
+         </div>
+        </div>
+       </div>
+       <div class="info-card fade-up delay-7" id="card-action" onclick="activateCard('action')">
+        <div class="card-icon action"><i data-lucide="home"></i>
+        </div>
+        <div class="card-body">
+         <div class="card-label action">
+          Required Action
+         </div>
+         <div class="card-text">
+          Write <strong>further comments</strong> in the iPad
+         </div>
+        </div>
+       </div>
+      </div>
+     </div><!-- RIGHT COLUMN -->
+     <div class="right-col fade-up delay-3">
+      <div class="image-container" style="max-width:100%; width:280px; margin-top:0;" onclick="openLightbox2()">
+       <img id="titleImage" src="https://raw.githubusercontent.com/pushkapatrick-design/CMP-OH-Mod-3-Code-244/main/damaged%20switch%20244.png" alt="Damaged switch 244 reference image" loading="lazy" onerror="console.error('Image failed:', this.src); this.style.background='linear-gradient(135deg,#1e293b,#0f172a)'; this.style.minHeight='300px'; this.alt='Image unavailable';">
+       <div class="img-label">
+        <button class="img-zoom-btn" id="titleZoomBtn" aria-label="Enlarge image"><i data-lucide="maximize-2"></i></button>
+       </div>
+      </div>
+     </div>
+     <div class="lightbox" id="lightbox">
+      <img src="https://raw.githubusercontent.com/pushkapatrick-design/ancillary-providers/main/Screenshot%202026-02-24%20134104.png" alt="Enlarged view — Code 244 damaged switch gang operator mechanism" loading="lazy" onerror="console.error('Lightbox image failed:', this.src); this.style.background='linear-gradient(135deg,#1e293b,#0f172a)'; this.style.minWidth='600px'; this.style.minHeight='400px'; this.alt='Image unavailable';">
+     </div><button class="lightbox-close" id="lightboxClose" aria-label="Close enlarged view"><i data-lucide="x"></i></button>
+     <div class="lightbox" id="lightbox2">
+      <img src="https://raw.githubusercontent.com/pushkapatrick-design/CMP-OH-Mod-3-Code-244/main/damaged%20switch%20244.png" alt="Enlarged view — damaged switch 244 reference" loading="lazy" onerror="console.error('Lightbox image failed:', this.src); this.style.background='linear-gradient(135deg,#1e293b,#0f172a)'; this.style.minWidth='600px'; this.style.minHeight='400px'; this.alt='Image unavailable';">
+     </div><button class="lightbox-close" id="lightboxClose2" aria-label="Close enlarged view"><i data-lucide="x"></i></button><!-- Bottom bar -->
+     <nav class="bottom-bar fade-up delay-7" aria-label="Slide navigation">
+     </nav>
+    </div>
+   </div>
+   <script>
+// ── Responsive scaler ──
+(function(){
+  const DESIGN_W = 1920, DESIGN_H = 1080;
+  const wrapper = document.getElementById('sl-wrapper');
+  const stage   = document.getElementById('sl-stage');
+
+  function rescale(){
+    const w = wrapper.clientWidth, h = wrapper.clientHeight;
+    const s = Math.min(w / DESIGN_W, h / DESIGN_H);
+    stage.style.transform = 'scale(' + s + ')';
+    stage.style.marginLeft = ((w - DESIGN_W * s) / 2) + 'px';
+    stage.style.marginTop  = ((h - DESIGN_H * s) / 2) + 'px';
+  }
+
+  if(window.ResizeObserver){
+    new ResizeObserver(rescale).observe(wrapper);
+  } else {
+    window.addEventListener('resize', rescale);
+  }
+  rescale();
+})();
+
+// ── Card interaction ──
+function activateCard(type){
+  document.querySelectorAll('.info-card').forEach(function(c){ c.classList.remove('active'); });
+  var el = document.getElementById('card-' + type);
+  if(el) el.classList.add('active');
+}
+
+// ── Lightbox ──
+function openLightbox(){
+  document.getElementById('lightbox').classList.add('active');
+  document.getElementById('lightboxClose').classList.add('active');
+}
+function openLightbox2(){
+  document.getElementById('lightbox2').classList.add('active');
+  document.getElementById('lightboxClose2').classList.add('active');
+}
+document.getElementById('titleZoomBtn').addEventListener('click', function(e){
+  e.stopPropagation();
+  openLightbox2();
+});
+document.getElementById('lightboxClose').addEventListener('click', function(){
+  document.getElementById('lightbox').classList.remove('active');
+  document.getElementById('lightboxClose').classList.remove('active');
+});
+document.getElementById('lightboxClose2').addEventListener('click', function(){
+  document.getElementById('lightbox2').classList.remove('active');
+  document.getElementById('lightboxClose2').classList.remove('active');
+});
+document.getElementById('lightbox').addEventListener('click', function(e){
+  if(e.target === this){
+    this.classList.remove('active');
+    document.getElementById('lightboxClose').classList.remove('active');
+  }
+});
+document.getElementById('lightbox2').addEventListener('click', function(e){
+  if(e.target === this){
+    this.classList.remove('active');
+    document.getElementById('lightboxClose2').classList.remove('active');
+  }
+});
+
+// ── Lucide icons ──
+lucide.createIcons();
+</script>
+  </div>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9df8428ee4f8f00f',t:'MTc3NDA0Njg2MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
